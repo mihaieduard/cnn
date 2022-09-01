@@ -124,17 +124,54 @@ class Convolution:
                 k+=1
         self.image = image
         return self.RezConv
+    def backProp(self, dL_dmax_pool, learning_rate):
+        # print("self.image.shape: ", self.image.shape)
+        # print("dL_dmax_pool.shape: ", dL_dmax_pool.shape)
+        # print("self.image.shape[0]: ", self.image.shape[0],"\nself.image.shape[1]: ", self.image.shape[1],"\nself.image.shape[2] :", self.image.shape[2])
+        dL_dX = np.zeros((self.image.shape[0], self.image.shape[1], self.image.shape[2]))
+        dL_dK = np.zeros((self.image.shape[0], self.image.shape[1], self.image.shape[2]))
+        # print("dL_dX.shape: ",dL_dX.shape)
+        # print("dL_dmax_pool.shape[0]: ", dL_dmax_pool.shape[0])
+        # print("self.filtre.shape: ", self.filtre.shape)
+        # print("numberOfFilters: ", self.numberOfFilters)
+        # print("dL_dmax_pool[0,:,:].shape: ",dL_dmax_pool[0,:,:].shape)
+        # print("self.filtre[0][0].shape: ", self.filtre[0+0].shape)
+        # print("self.image[i,:,:].sahpe: ",self.image.shape)
+        # print("dL_dmax_pool[i,:,:].shape: ", dL_dmax_pool.shape)
+        for i in range(self.image.shape[0]):
+            for j in range(self.numberOfFilters):
+                dL_dX[i] = signal.convolve2d(dL_dmax_pool[i,:,:], self.filtre[i+j], "full")
+        # print("dL_dX.shape", dL_dX.shape)
+        # print("dL_dK.shape", dL_dK.shape)
+
+        # dL_dF_params = np.zeros(self.filtre.shape)
+        # for i in range(self.filtre.shape[0]):
+        #     dL_dF_params[i] = signal.correlate2d()
+
+        dL_dK = np.zeros(self.filtre.shape)
+        # print(dL_dK.shape)
+        # print(self.filtre.shape)
+        # print(self.numberOfFilters)
+        # print(dL_dK[10])
+        # print("self.image.shape: ", self.image.shape)
+        # print("dL_dmax_pool: ", dL_dmax_pool.shape)
+        k=0
+        for i in range(self.image.shape[0]):
+            for j in range(self.numberOfFilters):
+                # print("i: ",i)
+                # print("j: ",j)
+                # print("k: ",k)
+                # dL_dK[k] =  np.copy(signal.correlate2d(self.image[j,:,:],dL_dmax_pool[i*self.image.shape[0]+j], "valid"))
+                dL_dK[k] =  np.copy(signal.correlate2d(self.image[i,:,:],dL_dmax_pool[j], "valid"))
+                # print("dL_dK[k.shape]: ", dL_dK[k].shape)
+                k += 1
+        #         print("\n-------------\n")
+        # print("dL_dK.shape: ",dL_dK.shape)
+
+        self.filtre -= learning_rate * dL_dK
+
+        return dL_dX
     
-    def backProp(self, dL_dmax_pool):
-        
-        print("dL_dmax_pool.shape: ", dL_dmax_pool.shape)
-        print("self.image.shape[1]: ", self.image.shape[1],"\nself.image.shape[2] :", self.image.shape[2])
-        dL_dX = np.zeros((self.numberOfFilters, self.image.shape[1], self.image.shape[2]))
-        print("dL_dX.shape: ",dL_dX.shape)
-        print("dL_dmax_pool.shape[0]: ", dL_dmax_pool.shape[0])
-        print("self.filtre.shape: ", self.filtre.shape)
-        for i in range(dL_dmax_pool.shape[0]):
-            dL_dX[i] = signal.convolve2d(dL_dmax_pool[i], self.filtre[i])
 
 class Pooling():
 
@@ -149,13 +186,14 @@ class Pooling():
             for i in range(self.height//self.filter_size):
                 for j in range(self.width//self.filter_size):
                     sub = image[k, i*self.filter_size: i*self.filter_size + self.filter_size, j*self.filter_size: j*self.filter_size + self.filter_size]
-                    # print("sub: ", sub.shape)
                     self.output[k,i,j] = np.amax(sub, axis = (0, 1))
 
         return self.output
 
     def back_prop_final(self, dL_dout):
         dL_dmax_pool = np.zeros(self.image.shape)
+        # print("self.num_filters: ",self.num_filters)
+        # print("dL_dout.shape: ", dL_dout.shape)
         for k in range(self.num_filters):
             for i in range(self.height//self.filter_size):
                 for j in range(self.width//self.filter_size):
@@ -222,10 +260,10 @@ class Softmax:
         
         return dL_d_inp.reshape(self.orig_im_shape)
         
-img = io.imread('flickr_dog_000002.jpg')
-h,w,c = img.shape
+# img = io.imread('flickr_dog_000002.jpg')
+# h,w,c = img.shape
 
-img = img.reshape((c,h,w))
+# img = img.reshape((c,h,w))
 
 # con = Convolution(5, 3, img)
 # Conv, con_RezConv = con.forwardProp()
@@ -268,12 +306,18 @@ pool1 = Pooling(2) # -> 6 x 160 x 176
 conv2 = Convolution(10,8)   # -> 10 x 153 x 169 
 pool2 = Pooling(2)  # -> 10 X 76 X 84
 soft  = Softmax(10 * 76 * 84,10) # -> 10
-print(img.shape)
+# print(img.shape)
+
+
+
+
+
+
 def cnn_forward_prop(image, label):
 
     out_p = conv1.forwardProp((image / 255) - 0.5)
     out_p = pool1.forward_prop(out_p)
-    print(out_p.shape)
+    # print(out_p.shape)
     out_p = conv2.forwardProp(out_p)
     out_p = pool2.forward_prop(out_p)
     out_p = soft.forward_prop(out_p)
@@ -299,9 +343,10 @@ def training_cnn(image, label, learn_rate = 0.005):
     grad_back = soft.back_prop(gradient, learn_rate)
 
     grad_back = pool2.back_prop_final(grad_back)
-    grad_back = conv2.backProp(grad_back)
+    grad_back = conv2.backProp(grad_back, 0.5)
+    # print("grad_back.shape: ",grad_back.shape)
     grad_back = pool1.back_prop_final(grad_back)
-    grad_back = conv1.backProp(grad_back)
+    grad_back = conv1.backProp(grad_back, 0.5)
+    # print("grad_back.shape: ",grad_back.shape)
     return loss, acc
 
-loss, acc = training_cnn(img,0)
