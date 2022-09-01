@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pickle
 from skimage import io
 import time
-# from images import trainImages, trainLabels, testImages, testLabels
+from images import trainImages, trainLabels, testImages, testLabels
 
 # dog1 = cv2.imread("flickr_dog_000002.jpg", cv2.IMREAD_COLOR)
 # dog1 = cv2.cvtColor(dog1, cv2.COLOR_BGR2RGB)
@@ -301,6 +301,12 @@ class Softmax:
 # print(softmax.forward_prop(pool2.forward_prop()))
 
 
+
+
+timeStart = time.time()
+
+
+print("see creeaza obiectele")
 conv1 = Convolution(6,6) # 3 x 325 x 357 ->6 x 320 x 352 
 pool1 = Pooling(2) # -> 6 x 160 x 176
 conv2 = Convolution(10,8)   # -> 10 x 153 x 169 
@@ -308,10 +314,10 @@ pool2 = Pooling(2)  # -> 10 X 76 X 84
 soft  = Softmax(10 * 76 * 84,10) # -> 10
 # print(img.shape)
 
-
-
-
-
+print("se amesteca datele")
+shuffle_data = np.random.permutation(len(trainImages))
+trainImages = trainImages[shuffle_data]
+trainLabels = trainLabels[shuffle_data]
 
 def cnn_forward_prop(image, label):
 
@@ -350,3 +356,34 @@ def training_cnn(image, label, learn_rate = 0.005):
     # print("grad_back.shape: ",grad_back.shape)
     return loss, acc
 
+print("\n ------------------------ Training Phase\n")
+loss = 0
+num_correct = 0
+for i, (im, label) in enumerate(zip(trainImages, trainLabels)):
+    print(i)
+    if i % 100 == 0:
+        print(' %d steps out of 100 steps: Average Loss %.3f and ACCuracy: %d%%' %(i+1,loss/100, num_correct))
+        loss = 0
+        num_correct = 0
+    l1, accu = training_cnn(im, label)
+    loss += l1
+    num_correct += accu
+
+print("\nTesting Phase\n")
+
+
+loss = 0 
+num_correct = 0
+for im, label in zip(testImages, testLabels):
+    _, l1, acc = cnn_forward_prop(im, label)
+    loss += l1
+    num_correct += acc
+
+# print(len(test_imgs))
+num_tests = len(testImages)
+print("Test Accuracy: ", num_correct/num_tests)
+
+print("numar imagini antrenare: ", len(trainImages))
+print("numar imagini testare: ", len(testImages))
+
+print("Time: ", time.time() - timeStart)
